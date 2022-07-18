@@ -1,0 +1,482 @@
+#+TITLE: Ranking of average treatment effects with generalized random forests for time-to-event outcomes: The empirical studies
+#+Author: Helene Charlotti Wiese Rytgaard & Thomas Alexander Gerds
+
+
+* Introduction
+
+Here we provide the R-codes that (re)produce the simulation study
+results presented in our manuscript.
+
+* Preparation
+
+Clone the github repository, then load (and install first if
+necessary) the following packages:
+
+#+BEGIN_SRC R  :results output raw  :exports code  :session *R* :cache yes  
+library(targets)
+library(tarchetypes)
+library(Publish)
+library(data.table)
+library(ggplot2)
+library(parallel)
+library(ranger)
+library(prodlim)
+library(grf)
+library(survival)
+library(cowplot)
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:35) 5a2f7921c78caef85ea47e54c5499b582c56f4f2]:
+
+Loading required package: prodlim
+data.table 1.14.2 using 4 threads (see ?getDTthreads).  Latest news: r-datatable.com
+Use suppressPackageStartupMessages() to eliminate package startup messages
+
+Source the R-functions
+
+#+BEGIN_SRC R  :results output raw  :exports code  :session *R* :cache yes  
+# load all functions
+for(f in list.files("R",".R$",full.names=TRUE)){source(f)}
+for(f in list.files("functions",".R$",full.names=TRUE)){source(f)}
+source("./setting/simulation_targets.R")
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:36) 1083a3632f72f2c338f60efe397911d27e462496]:
+
+Attaching package: ‘lava’
+
+The following objects are masked _by_ ‘.GlobalEnv’:
+
+    expit, logit
+
+The following object is masked from ‘package:ggplot2’:
+
+    vars
+
+Attaching package: ‘lava’
+
+The following objects are masked _by_ ‘.GlobalEnv’:
+
+    expit, logit
+
+The following object is masked from ‘package:ggplot2’:
+
+    vars
+
+* Demo
+
+** Simulate data
+
+The function =simulateData= simulates 3 latent event times, one for
+each of 2 causes, and one for the right censoring time. The minimum of
+the three latent times is given in the column =time=. The event type
+is in the column =event= where value =0= codes for right censored, =1=
+event of cause 1 and =2= event of cause 2. The distributions of the
+latent times depends on five discrete (varying prevalence) and two
+continuous covariates and ten binary treatment variables (varying
+prevalence) as defined by the current setting.
+
+#+BEGIN_SRC R  :results output example  :exports both  :session *R* :cache yes  
+fixed
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:36) 5c4139cacd7e0e312bba25817204e8572ef8bf14]:
+#+begin_example
+$event.times
+[1] "T1" "T2"
+
+$treatments
+ A1  A2  A3  A4  A5  A6  A7  A8  A9 A10 
+0.4 0.3 0.3 0.4 0.5 0.2 0.7 0.8 0.9 0.1 
+
+$binary.covariates
+ X1  X2  X3  X4  X5 
+0.1 0.2 0.3 0.4 0.5 
+
+$normal.covariates
+[1] "X6" "X7"
+
+$quadratic.covariates
+[1] "X6"
+#+end_example
+
+In addition to the fixed parameters our simulation design also has
+varying parameter values. They can be inspected by looking at the
+following object:
+
+#+ATTR_LATEX: :options otherkeywords={}, deletekeywords={}
+#+BEGIN_SRC R  :results output raw drawer  :exports code  :session *R* :cache yes  
+tar_read(VARYING) 
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:36) 426d486a51b67a3234bd3c64952becd9809a1bb3]:
+:results:
+     A1_T1 A1_T2 A2_T1 A2_T2 scale.censored sample.size horizon         setting        method weighter   net treat
+  1:  1.25   0.8     1  1.25          0.025         500       5        formula1 causal_forest   ranger FALSE    A1
+  2:  1.25   0.8     1  1.25          0.025        1000       5        formula1 causal_forest   ranger FALSE    A1
+  3:  1.25   0.8     1  1.25          0.025        2000       5        formula1 causal_forest   ranger FALSE    A1
+  4:  1.25   0.8     1  1.25          0.025        5000       5        formula1 causal_forest   ranger FALSE    A1
+  5:  1.25   1.0     1  1.25          0.025         500       5        formula1 causal_forest   ranger FALSE    A1
+ ---                                                                                                              
+121:  1.25   1.0     1  2.00          0.025        1000       5 formula_ranking causal_forest   ranger  TRUE   all
+122:  1.25   1.0     1  2.00          0.025        2000       5 formula_ranking causal_forest   ranger FALSE   all
+123:  1.25   1.0     1  2.00          0.025        2000       5 formula_ranking causal_forest   ranger  TRUE   all
+124:  1.25   1.0     1  2.00          0.025        5000       5 formula_ranking causal_forest   ranger FALSE   all
+125:  1.25   1.0     1  2.00          0.025        5000       5 formula_ranking causal_forest   ranger  TRUE   all
+     num.trees        theme reps
+  1:        50 crude_effect 1001
+  2:        50 crude_effect 1001
+  3:        50 crude_effect 1001
+  4:        50 crude_effect 1001
+  5:        50 crude_effect 1001
+ ---                            
+121:       100      ranking 1001
+122:       100      ranking 1001
+123:       100      ranking 1001
+124:        50      ranking 1001
+125:        50      ranking 1001
+:end:
+
+The dependence of all the variables is defined by a set of
+formulae. Here the values are hazard ratios and odds ratios specified
+on the logarithmic scale.
+#+BEGIN_SRC R  :results output example  :exports both  :session *R* :cache yes  
+formula1
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:36) 7c78430e442837b5fe50d61112cf7fde919a362a]:
+#+begin_example
+[[1]]
+T1 ~ f(A4, 0.3) + f(A5, 0.7) + f(X1, 1) + f(X2, 0.3) + f(X6, 
+    -0.5)
+
+[[2]]
+T2 ~ f(A5, -0.3) + f(X1, -0.1) + f(X2, 0.6) + f(X6, 0.1)
+
+[[3]]
+C ~ f(A1, 0)
+
+[[4]]
+A1 ~ f(X1, -1) + f(X6, 0.7) + f(A7, 0.2)
+#+end_example
+
+Furthermore, the effect of the treatments =A1= and =A2= on the latent
+event times are controlled by hazard ratio parameters denoted =A1_T1=,
+=A1_T2=, =A2_T1=, =A2_T2=.  Finally, the baseline hazard rate of the
+censoring distribution is controlled by the parameter
+=scale.censored=.
+
+#+ATTR_LATEX: :options otherkeywords={}, deletekeywords={}
+#+BEGIN_SRC R  :results output example  :exports code  :session *R* :cache yes
+set <- fixed
+set$formula.list <- formula1
+set.seed(9)
+simulated_data <- simulateData(setting = set,
+                     A1_T1 = 1.25,
+                     A1_T2 = 1.25,
+                     A2_T1 = 1,
+                     A2_T2 = .8,
+                     n = 2000,
+                     scale.censored = 1/40,
+                     keep.latent = FALSE)
+simulated_data
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:36) 59a49c193005e9ce39f902c3e7d53296161d695f]:
+#+begin_example
+      X1 X2 X3 X4 X5          X6          X7        X6_2 A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 T1_placebo_A1 T1_treated_A1
+   1:  1  0  1  0  0 -0.13320377 -2.76054462 0.017743244  1  0  0  0  1  0  1  1  1   0      2.920663     4.1787742
+   2:  0  0  0  0  1 -0.46789875 -0.44387025 0.218929239  1  0  0  0  0  1  1  0  0   0     13.948467     7.0472415
+   3:  0  0  0  0  1 -0.10222587 -0.27119836 0.010450129  0  0  1  0  1  0  1  0  1   0      5.847045     4.1586146
+   4:  0  0  1  1  0 -1.16968648  0.73975867 1.368166465  0  1  0  0  1  0  0  1  1   0      1.298224     0.6095287
+   5:  0  0  1  1  0  0.71642285 -0.88792324 0.513261702  0  1  0  0  1  0  0  1  1   0      2.461545     4.6580688
+  ---                                                                                                              
+1996:  0  0  0  0  1 -0.38356362 -0.88460206 0.147121052  0  0  1  0  0  0  0  1  0   0      5.985083     3.5434311
+1997:  0  0  0  0  0 -0.21478075  0.39170095 0.046130772  0  0  0  0  0  0  1  1  0   0     10.925931     9.1298884
+1998:  0  0  0  0  0 -0.45730336 -1.01363116 0.209126362  0  1  0  1  1  0  0  0  0   0      4.662806     2.0319970
+1999:  0  0  1  0  1 -0.82956666 -0.14510451 0.688180837  1  1  1  0  0  0  0  0  0   0      8.545046     5.7484960
+2000:  1  0  1  0  1 -0.04625021 -0.08438956 0.002139082  0  1  0  1  0  1  0  1  0   0      1.923223     6.9399506
+      T1_placebo_A2 T1_treated_A2 T2_placebo_A1 T2_treated_A1 T2_placebo_A2 T2_treated_A2      time event
+   1:      4.178774      3.381759     12.096225      8.157008      8.157008     20.358933  4.178774     1
+   2:      7.047241      3.976646      5.256086      8.964313      8.964313      4.300355  7.047241     1
+   3:      5.847045     10.580990      3.718781      9.400824      3.718781     10.675031  2.503185     0
+   4:      3.304938      1.298224      7.340092      9.884599     17.612549      7.340092  1.298224     1
+   5:      8.705554      2.461545      9.143714     10.560168      4.352860      9.143714  2.461545     1
+  ---                                                                                                    
+1996:      5.985083      4.510087      9.029377     13.084018      9.029377     17.294288  5.985083     1
+1997:     10.925931     14.901843     12.099613      4.074134     12.099613     11.786806 10.925931     1
+1998:      1.220189      4.662806      4.862366     25.447910     14.730231      4.862366  4.131021     0
+1999:      5.361188      5.748496     12.382879     11.635689      7.303464     11.635689  5.748496     1
+2000:      3.509771      1.923223      8.983870      6.018989     25.589130      8.983870  1.923223     1
+#+end_example
+
+** True value of the average treatment effects
+
+We approximate the true values of the crude and net average treatment
+effects at the time horizon as well as the percentage of censored
+*before* the time horizon. We do this by simulating large datasets in
+the setting where the treatments =A1= and =A2= are randomized. To
+minimize Monte-Carlo error, we repeat this =10= times and report
+averages.
+
+#+BEGIN_SRC R  :results output example  :exports both  :session *R* :cache yes
+set.seed(7)
+tt=theTruth(setting = set,
+         A1_T1 = 1.25,
+         A1_T2 = 1.25,
+         A2_T1 = 1,
+         A2_T2 = .8,
+         B=10, # number of repetitions
+         horizon=5,
+         scale.censored=1/40,
+         n = 100000)
+tt[cause==1]
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:46) fa0bed239c1fb2011b68ba3dbf560b9ed4f53fbf]:
+:    intervene cause net scale.censored      ate censored.tau
+: 1:        A1     1   1          0.025 0.059364        33.79
+: 2:        A2     1   1          0.025 0.000180        33.79
+: 3:        A1     1   0          0.025 0.045185        33.79
+: 4:        A2     1   0          0.025 0.007840        33.79
+
+The crude effect of =A1= is larger than the net effect because =A1=
+increases the hazard rate of events of cause 2 and hence subjects are
+shorter time at risk for cause 1.
+
+** Estimator
+
+*** Single treatment: crude
+#+BEGIN_SRC R  :results output example  :exports both  :session *R* :cache yes  
+set.seed(4)
+x <- causalhunter(formula=Hist(time,event)~intervene(A1)+A2+A3+A4+A5+A6+A7+A8+A9+A10+X1+X2+X3+X4+X5+X6+X7,
+               method = "causal_forest",
+               weighter="ranger",
+               args.weight = list(num.trees = 100,alpha = 0.05,mtry = 17), # arguments for weighter
+               fit.separate = TRUE, # fit G and G2 separately
+               num.trees=100, # number of trees for the function causal_forest
+               CR.as.censoring = 0, # 0 = crude effects, 1 = net effects
+               data=simulated_data,
+               times=5, # time horizon
+               formula.weight = Hist(time,event)~A1+A2+A3+A4+A5+A6+A7+A8+A9+A10+X1+X2+X3+X4+X5+X6+X7)
+set(x,j="true.ate",value=tt[intervene=="A1"&net==0&cause==1,ate])
+x
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:49) fc85525cf45dd58040b89840ad0338a7534b29db]:
+:    time intervene        ate         se       lower      upper true.ate
+: 1:    5        A1 0.03334221 0.03129835 -0.02800143 0.09468585 0.045185
+
+*** Single treatment: net
+#+BEGIN_SRC R  :results output example  :exports both  :session *R* :cache yes  
+set.seed(4)
+y <- causalhunter(formula=Hist(time,event)~intervene(A1)+A2+A3+A4+A5+A6+A7+A8+A9+A10+X1+X2+X3+X4+X5+X6+X7,
+                  method = "causal_forest",
+                  weighter="ranger",
+                  args.weight = list(num.trees = 100,alpha = 0.05,mtry = 17), # arguments for weighter
+                  fit.separate = TRUE, # fit G and G2 separately
+                  num.trees=100, # number of trees for the function causal_forest
+                  CR.as.censoring = 1, # 0 = crude effects, 1 = net effects
+                  data=simulated_data,
+                  times=5, # time horizon 
+                  formula.weight = Hist(time,event)~A1+A2+A3+A4+A5+A6+A7+A8+A9+A10+X1+X2+X3+X4+X5+X6+X7)
+set(y,j="true.ate",value=tt[intervene=="A1"&net==1&cause==1,ate])
+y
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:53) 6a9de4efbc17d39712787b7de97fc28bf7891257]:
+:    time intervene        ate         se       lower      upper true.ate
+: 1:    5        A1 0.02160464 0.03579717 -0.04855652 0.09176581 0.059364
+
+* Empirical studies
+
+Our empirical studies are organized with the help of the magnificent
+package =targets=, see https://books.ropensci.org/targets/. The
+simulation settings are defined in the file
+[[./setting/simulation_targets.R]] and run by the master file
+[[./_targets.R]]. The results are saved and can be assessed by the
+function =tar_read= as is shown below.
+
+** Performance results
+
+*** Crude effects
+#+BEGIN_SRC R  :results silent  :exports code  :session *R* :cache yes
+x=tar_read(RESULTS)
+x_crude = x[theme=="crude_effect"&A1_T2==0.8]
+tabel_crude=x_crude[,.(method,n=n,"P(C<5)"=round(censored.tau,1),A1_T1,A1_T2,bias=round(100*bias,2),SD=round(100*sd,2),SE=round(100*mean.se,2),coverage=round(100*coverage,1))]
+tabel_crude
+#+END_SRC
+
+#+BEGIN_SRC R  :results output raw drawer  :exports results  :session *R* :cache yes  
+Publish::org(tabel_crude)
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:54) a66a92cde7e5c97f900778c0bb2514636450ee11]:
+:results:
+| method        |    n | P(C<5) | A1_T1 | A1_T2 |  bias |   SD |   SE | coverage |
+|---------------+------+--------+-------+-------+-------+------+------+----------|
+| causal_forest |  500 |   13.1 |  1.25 |   0.8 | -2.43 | 5.90 | 6.08 |     92.5 |
+| causal_forest | 1000 |   13.1 |  1.25 |   0.8 | -1.62 | 4.21 | 4.36 |     94.7 |
+| causal_forest | 2000 |   13.1 |  1.25 |   0.8 | -1.04 | 3.22 | 3.12 |     92.7 |
+| causal_forest | 5000 |   13.1 |  1.25 |   0.8 | -0.45 | 1.95 | 2.00 |     95.1 |
+:end:
+
+*** Net effects
+#+BEGIN_SRC R  :results silent  :exports code  :session *R* :cache yes
+x=tar_read(RESULTS)
+x_net = x[theme=="net_effect" & net==1]
+tabel_net=x_net[,.(method,"P(C<5)"=round(censored.tau,1),A1_T1,A1_T2,bias=round(100*bias,2),SD=round(100*sd,2),SE=round(100*mean.se,2),coverage=round(100*coverage,1))]
+tabel_net
+#+END_SRC
+
+#+BEGIN_SRC R  :results output raw drawer  :exports results  :session *R* :cache yes  
+Publish::org(tabel_net)
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:54) 9b5ef84a8772ecb03367cf42518f1252962eeed8]:
+:results:
+| method        | P(C<5) | A1_T1 | A1_T2 | bias |   SD |   SE | coverage |
+|---------------+--------+-------+-------+------+------+------+----------|
+| causal_forest |   13.1 |  0.80 |   0.8 | 0.10 | 2.21 | 2.16 |     94.6 |
+| causal_forest |   13.1 |  1.00 |   0.8 | 0.38 | 2.21 | 2.24 |     95.0 |
+| causal_forest |   13.1 |  1.25 |   0.8 | 0.37 | 2.30 | 2.29 |     94.7 |
+:end:
+
+**** boxplots: Crude and net effects
+
+#+BEGIN_SRC R :results file graphics :file ./output/crude-net-effect-boxplots.png :exports none :session *R* :cache yes :width 1500 :height 1000
+p=tar_read(PLOTFRAME)
+# crude
+b1=boxplot_effects(data=p[theme=="crude_effect"&n==5000&net==0])
+b1_labs=paste("Effect A1 on T2: ",c(0.8,1,1.25))
+names(b1_labs)=c(0.8,1,1.25)
+b1=b1+facet_grid(~A1_T2,labeller=labeller(A1_T2=b1_labs))
+# net
+b2=boxplot_effects(data=p[theme=="net_effect"&n==5000&net==1])
+b2_labs=paste("Effect A1 on T1: ",c(0.8,1,1.25))
+names(b2_labs)=c(0.8,1,1.25)
+b2=b2+facet_grid(~A1_T1,labeller=labeller(A1_T1=b1_labs))
+cowplot::plot_grid(b1+ggtitle("Crude effects"),b2+ggtitle("Net effects"),ncol = 1)
+#+END_SRC
+
+#+RESULTS[(2022-07-18 09:37:40) 7b814fdd943f4efcc3cbdeb1269538fcfedad28f]:
+[[file:./output/crude-net-effect-boxplots.png]]
+
+
+**** boxplots: Sample size
+
+#+BEGIN_SRC R :results file graphics :file ./output/sample-size-boxplots.png :exports none :session *R* :cache yes :width 1000 :height 1000
+p=tar_read(PLOTFRAME)
+b_c=boxplot_effects(p[theme=="censoring"&net==0&formula=="formula1"])
+b_c=b_c+facet_grid(censored.tau~n)+ylim(c(-.15,.15))
+b_c + theme(legend.position="none")
+#+END_SRC
+
+#+RESULTS[(2022-07-18 09:39:04) c535acf7f68d49932d139ac6f4587c951d9b023b]:
+[[file:./output/sample-size-boxplots.png]]
+
+
+**** coverage:
+
+#+BEGIN_SRC R :results file graphics :file ./output/coverage.png :exports none :session *R* :cache yes :width 600 :height 300
+r=tar_read(RESULTS)     
+## R=r[formula=="formula1"&horizon==5&theme!="sample_size"]  
+R=r[net==0]
+R[,A1_T1:=factor(A1_T1,levels=c("0.8","1","1.25"),labels=c("0.8","1","1.25"))]
+R[,A1_T2:=factor(A1_T2,levels=c("0.8","1","1.25"),labels=c("0.8","1","1.25"))]  
+R[,A2_T1:=factor(A2_T1,levels=c("1"),labels=c("1"))]
+R[,A2_T2:=factor(A2_T2,levels=c("0.2","0.8","1","1.25","2"),labels=c("0.2","0.8","1","1.25","2"))]
+R[,n:=factor(n,levels=c("500","1000","2000","5000"),labels=c("500","1000","2000","5000"))]
+R[,censored.tau:=factor(round(censored.tau,1))]
+R=R[theme!="weighter",.(repetitions,theme,censored.tau,formula,n,A1_T1,A1_T2,horizon,bias, mean.se, coverage)]
+R1a=R[theme=="censoring"&formula=="formula1"] 
+R1b=R[theme=="censoring"&formula=="formula_cens"]
+# coverage independent censoring varying censored procentage at time horizon
+g1a=ggplot(R1a,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(.85,1))+xlab("Sample size")+ylab("Coverage")+
+  ggtitle("Independent censoring")
+# coverage dependent censoring varying censored procentage at time horizon
+g1b=ggplot(R1b,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(.9,1))+xlab("Sample size")+ylab("Coverage")+
+  ggtitle("Informative censoring")
+# bias independent censoring varying censored procentage at time horizon
+b1a=ggplot(R1a,aes(x=n,y=bias,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(-.025,.025))+xlab("Sample size")+ylab("Bias")+
+  ggtitle("Independent censoring")
+# bias dependent censoring varying censored procentage at time horizon
+b1b=ggplot(R1b,aes(x=n,y=bias,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(-.025,.025))+xlab("Sample size")+ylab("Bias")+
+  ggtitle("Informative censoring")
+p.coverage <- cowplot::plot_grid(g1a,g1b,b1a,b1b,ncol=2)
+p.coverage
+#+END_SRC
+
+#+RESULTS[(2022-07-18 09:36:00) ac6f83ba4f583d1ad71ae78b7c7bed90f29728de]:
+[[file:./output/coverage.png]]
+
+
+*** Censoring percentage 
+
+#+ATTR_LATEX: :options otherkeywords={}, deletekeywords={}
+#+BEGIN_SRC R  :results silent  :exports code  :session *R* :cache yes  
+x=tar_read(RESULTS)
+x_censoring = x[theme=="censoring" &n==5000]
+setkey(x_censoring,formula,censored.tau)
+tabel_censoring=x_censoring[,.(method,formula,"P(C<3)"=round(censored.tau,1),A1_T1,A1_T2,bias=round(100*bias,2),SD=round(100*sd,2),SE=round(100*mean.se,2),coverage=round(100*coverage,1))]
+tabel_censoring
+#+END_SRC
+
+#+BEGIN_SRC R  :results output raw drawer  :exports results  :session *R* :cache yes  
+org(tabel_censoring)
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:56) 4a675d5b8a3c93eabe0fc69383c7dc0fea14918c]:
+:results:
+| method        | formula      | P(C<3) | A1_T1 | A1_T2 |  bias |   SD |   SE | coverage |
+|---------------+--------------+--------+-------+-------+-------+------+------+----------|
+| causal_forest | formula1     |    0.0 |  1.25 |     1 | -0.31 | 1.20 | 1.18 |     93.0 |
+| causal_forest | formula1     |   13.1 |  1.25 |     1 | -0.24 | 1.26 | 1.24 |     94.4 |
+| causal_forest | formula1     |   20.1 |  1.25 |     1 | -0.31 | 1.21 | 1.27 |     94.6 |
+| causal_forest | formula_cens |    0.0 |  1.25 |     1 | -0.33 | 1.19 | 1.18 |     92.9 |
+| causal_forest | formula_cens |   13.1 |  1.25 |     1 | -0.38 | 1.24 | 1.23 |     93.7 |
+| causal_forest | formula_cens |   20.1 |  1.25 |     1 | -0.38 | 1.27 | 1.27 |     93.3 |
+:end:
+
+*** Misspecified parametric models
+
+#+BEGIN_SRC R :results file graphics :file ./output/misspecified-parametric-boxplots.png :exports none :session *R* :cache yes :height 1000 :width 1000
+p=tar_read(PLOTFRAME)
+b_m=boxplot_effects(p[theme=="misspecified"])
+b_m=b_m+facet_grid(~method)
+b_m
+p.misspecified <- b_m+theme_bw()+theme(axis.text=element_text(size=12),axis.title=element_text(size=18),legend.position="none",
+                                       strip.text = element_text(size=16),
+                                       strip.background = element_blank())
+p.misspecified + theme(plot.margin=unit(c(1,1,1,1),"cm"))
+#+END_SRC
+
+#+RESULTS[(2022-07-18 09:41:24) 3fa24943f63c609043e6d76c2527765f0723e05a]:
+[[file:./output/misspecified-parametric-boxplots.png]]
+
+*** Ranking performance
+
+#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes
+ran <- tar_read(RANKING)[A2_T2%in%c(0.2,1,2)&scale.censored==0.025]
+ran[, A2_T2_text:=paste0("A2 on T2: ", A2_T2)] 
+ran[,net:=factor(net,levels=c(0,1),labels=c("Crude","Net"))]
+gnet=ggplot(ran[net=="Net"&intervene%in%c("A1","A2","A3")&rank==1],aes(x=n,y=mean,linetype=intervene,group=intervene))+geom_line()+geom_point()+facet_grid(~A2_T2_text)+ylim(c(0,1))+ylab("Frequency of rank 1")+guides(linetype=guide_legend(title=""))
+gcrude=ggplot(ran[net=="Crude"&intervene%in%c("A1","A2","A3")&rank==1],aes(x=n,y=mean,linetype=intervene,group=intervene))+geom_line()+geom_point()+
+  facet_grid(~A2_T2_text)+ylim(c(0,1))+ylab("Frequency of rank 1")+guides(linetype=guide_legend(title=""))
+p.ranking <- cowplot::plot_grid(gcrude+ggtitle("Crude effects")+theme_bw()+
+                                theme(axis.text.x=element_text(size=12,angle=45,hjust=1),
+                                      axis.text.y=element_text(size=12,hjust=1),axis.title=element_text(size=12),
+                                      strip.text = element_text(size=12),
+                                      plot.title=element_text(size=16, hjust=0.5), 
+                                      strip.background = element_blank()),gnet+ggtitle("Net effects")+theme_bw()+theme(axis.text.x=element_text(size=12,angle=45,hjust=1),
+                                                                                                                       axis.text.y=element_text(size=12,hjust=1),axis.title=element_text(size=12),
+                                                                                                                       strip.text = element_text(size=12),
+                                                                                                                       plot.title=element_text(size=16, hjust=0.5),
+                                                                                                                       strip.background = element_blank()),ncol = 1)
+p.ranking
+#+END_SRC
+
+#+RESULTS[(2022-07-18 08:24:57) 542df85c25387d5e528342bd72c96ba9c81bee99]:
+[[file:./output/ranking-performance.png]]
+
+
