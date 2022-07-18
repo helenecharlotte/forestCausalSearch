@@ -281,18 +281,18 @@ Publish::org(tabel_net)
 
 **** boxplots: Crude and net effects
 
-#+BEGIN_SRC R :results file graphics :file ./output/crude-net-effect-boxplots.png :exports none :session *R* :cache yes :width 1500 :height 1000
+#+BEGIN_SRC R :results file graphics :file ./output/crude-net-effect-boxplots.png :exports none :session *R* :cache yes :width 750 :height 500
 p=tar_read(PLOTFRAME)
 # crude
 b1=boxplot_effects(data=p[theme=="crude_effect"&n==5000&net==0])
 b1_labs=paste("Effect A1 on T2: ",c(0.8,1,1.25))
 names(b1_labs)=c(0.8,1,1.25)
-b1=b1+facet_grid(~A1_T2,labeller=labeller(A1_T2=b1_labs))
+b1=b1+facet_grid(~A1_T2,labeller=labeller(A1_T2=b1_labs))+ theme(legend.position="none")
 # net
 b2=boxplot_effects(data=p[theme=="net_effect"&n==5000&net==1])
 b2_labs=paste("Effect A1 on T1: ",c(0.8,1,1.25))
 names(b2_labs)=c(0.8,1,1.25)
-b2=b2+facet_grid(~A1_T1,labeller=labeller(A1_T1=b1_labs))
+b2=b2+facet_grid(~A1_T1,labeller=labeller(A1_T1=b1_labs))+ theme(legend.position="none")
 cowplot::plot_grid(b1+ggtitle("Crude effects"),b2+ggtitle("Net effects"),ncol = 1)
 #+END_SRC
 
@@ -301,7 +301,7 @@ cowplot::plot_grid(b1+ggtitle("Crude effects"),b2+ggtitle("Net effects"),ncol = 
 
 **** boxplots: Sample size
 
-#+BEGIN_SRC R :results file graphics :file ./output/sample-size-boxplots.png :exports none :session *R* :cache yes :width 1000 :height 1000
+#+BEGIN_SRC R :results file graphics :file ./output/sample-size-boxplots.png :exports none :session *R* :cache yes :width 500 :height 500
 p=tar_read(PLOTFRAME)
 b_c=boxplot_effects(p[theme=="censoring"&net==0&formula=="formula1"])
 b_c=b_c+facet_grid(censored.tau~n)+ylim(c(-.15,.15))
@@ -373,7 +373,7 @@ org(tabel_censoring)
 
 *** Misspecified parametric models
 
-#+BEGIN_SRC R :results file graphics :file ./output/misspecified-parametric-boxplots.png :exports none :session *R* :cache yes :height 1000 :width 1000
+#+BEGIN_SRC R :results file graphics :file ./output/misspecified-parametric-boxplots.png :exports none :session *R* :cache yes :height 300 :width 300
 p=tar_read(PLOTFRAME)
 b_m=boxplot_effects(p[theme=="misspecified"])
 b_m=b_m+facet_grid(~method)
@@ -388,7 +388,7 @@ p.misspecified + theme(plot.margin=unit(c(1,1,1,1),"cm"))
 
 *** Ranking performance
 
-#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes
+#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes :width 300 :height 300
 ran <- tar_read(RANKING)[A2_T2%in%c(0.2,1,2)&scale.censored==0.025]
 ran[, A2_T2_text:=paste0("A2 on T2: ", A2_T2)] 
 ran[,net:=factor(net,levels=c(0,1),labels=c("Crude","Net"))]
