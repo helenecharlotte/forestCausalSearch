@@ -388,7 +388,7 @@ p.misspecified + theme(plot.margin=unit(c(1,1,1,1),"cm"))
 
 *** Ranking performance
 
-#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes :width 500 :height 500
+#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes :width 700 :height 700
 ran <- tar_read(RANKING)[A2_T2%in%c(0.2,1,2)&scale.censored==0.025]
 ran[, A2_T2_text:=paste0("A2 on T2: ", A2_T2)] 
 ran[,net:=factor(net,levels=c(0,1),labels=c("Crude","Net"))]
@@ -407,9 +407,6 @@ p.ranking <- cowplot::plot_grid(gcrude+ggtitle("Crude effects")+theme_bw()+
                                                                                                                        strip.background = element_blank()),ncol = 1)
 p.ranking
 #+END_SRC
-
-#+RESULTS[(2022-07-18 09:50:29) 291c2010f05cb033a4834ee4a257e3da9d3c8a1d]:
-[[file:./output/ranking-performance.png]]
 
 [[file:./output/ranking-performance.png]]
 
