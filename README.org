@@ -279,7 +279,7 @@ Publish::org(tabel_net)
 | causal_forest |   13.1 |  1.25 |   0.8 | 0.37 | 2.30 | 2.29 |     94.7 |
 :end:
 
-**** boxplots: Crude and net effects
+*** Boxplots: Crude and net effects
 
 #+BEGIN_SRC R :results file graphics :file ./output/crude-net-effect-boxplots.png :exports none :session *R* :cache yes :width 750 :height 500
 p=tar_read(PLOTFRAME)
@@ -299,7 +299,7 @@ cowplot::plot_grid(b1+ggtitle("Crude effects"),b2+ggtitle("Net effects"),ncol = 
 [[file:./output/crude-net-effect-boxplots.png]]
 
 
-**** boxplots: Sample size
+*** Boxplots: Sample size (crude effects)
 
 #+BEGIN_SRC R :results file graphics :file ./output/sample-size-boxplots.png :exports none :session *R* :cache yes :width 500 :height 500
 p=tar_read(PLOTFRAME)
@@ -311,7 +311,7 @@ b_c + theme(legend.position="none")
 [[file:./output/sample-size-boxplots.png]]
 
 
-**** coverage:
+*** Coverage (crude effects):
 
 #+BEGIN_SRC R :results file graphics :file ./output/coverage.png :exports none :session *R* :cache yes :width 600 :height 300
 r=tar_read(RESULTS)     
@@ -345,7 +345,7 @@ p.coverage
 [[file:./output/coverage.png]]
 
 
-*** Censoring percentage 
+*** Censoring percentage (crude effects)
 
 #+ATTR_LATEX: :options otherkeywords={}, deletekeywords={}
 #+BEGIN_SRC R  :results silent  :exports code  :session *R* :cache yes  
@@ -371,7 +371,7 @@ org(tabel_censoring)
 | causal_forest | formula_cens |   20.1 |  1.25 |     1 | -0.38 | 1.27 | 1.27 |     93.3 |
 :end:
 
-*** Misspecified parametric models
+*** Misspecified parametric models (crude effects)
 
 #+BEGIN_SRC R :results file graphics :file ./output/misspecified-parametric-boxplots.png :exports none :session *R* :cache yes :height 500 :width 500
 p=tar_read(PLOTFRAME)
@@ -386,7 +386,7 @@ p.misspecified + theme(plot.margin=unit(c(1,1,1,1),"cm"))
 
 [[file:./output/misspecified-parametric-boxplots.png]]
 
-*** Ranking performance
+*** Ranking performance (crude and net effects)
 
 #+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes :width 700 :height 700
 ran <- tar_read(RANKING)[A2_T2%in%c(0.2,1,2)&scale.censored==0.025]
