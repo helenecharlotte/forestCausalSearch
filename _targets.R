@@ -1,7 +1,5 @@
-## setwd("~/research/SoftWare/grfCausalSearch/")
-try(setwd("~/research/SoftWare/grfCausalSearch/"),silent=TRUE)
+## setwd("~/research/SoftWare/forestCausalSearch//")
 library(targets)
-server <- !inherits(try(setwd("/maps/projects/biostat01/people/grb615/research/SoftWare/grfCausalSearch"),silent = TRUE),"try-error")
 # ---------------------------------------------------------------------
 # packages
 # ---------------------------------------------------------------------
