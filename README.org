@@ -35,7 +35,6 @@ for(f in list.files("functions",".R$",full.names=TRUE)){source(f)}
 source("./setting/simulation_targets.R")
 #+END_SRC
 
-
 * Demo
 
 ** Simulate data
@@ -53,6 +52,7 @@ prevalence) as defined by the current setting.
 fixed
 #+END_SRC
 
+#+RESULTS[(2023-01-09 14:23:03) 5c4139cacd7e0e312bba25817204e8572ef8bf14]:
 #+begin_example
 $event.times
 [1] "T1" "T2"
@@ -77,9 +77,38 @@ varying parameter values. They can be inspected by looking at the
 following object:
 
 #+ATTR_LATEX: :options otherkeywords={}, deletekeywords={}
-#+BEGIN_SRC R  :results output raw drawer  :exports code  :session *R* :cache yes  :eval never
+#+BEGIN_SRC R  :results output raw drawer  :exports code  :session *R* :cache yes  
 tar_read(VARYING) 
 #+END_SRC
+
+#+RESULTS[(2023-01-10 11:49:39) 426d486a51b67a3234bd3c64952becd9809a1bb3]:
+:results:
+     A1_T1 A1_T2 A2_T1 A2_T2 scale.censored sample.size horizon         setting        method weighter   net treat
+  1:  1.25   0.8     1  1.25          0.025         500       5        formula1 causal_forest   ranger FALSE    A1
+  2:  1.25   0.8     1  1.25          0.025        1000       5        formula1 causal_forest   ranger FALSE    A1
+  3:  1.25   0.8     1  1.25          0.025        2000       5        formula1 causal_forest   ranger FALSE    A1
+  4:  1.25   0.8     1  1.25          0.025        5000       5        formula1 causal_forest   ranger FALSE    A1
+  5:  1.25   1.0     1  1.25          0.025         500       5        formula1 causal_forest   ranger FALSE    A1
+ ---                                                                                                              
+142:  1.25   1.0     1  2.00          0.025        1000       5 formula_ranking causal_forest   ranger  TRUE   all
+143:  1.25   1.0     1  2.00          0.025        2000       5 formula_ranking causal_forest   ranger FALSE   all
+144:  1.25   1.0     1  2.00          0.025        2000       5 formula_ranking causal_forest   ranger  TRUE   all
+145:  1.25   1.0     1  2.00          0.025        5000       5 formula_ranking causal_forest   ranger FALSE   all
+146:  1.25   1.0     1  2.00          0.025        5000       5 formula_ranking causal_forest   ranger  TRUE   all
+     num.trees        theme reps
+  1:        50 crude_effect 2002
+  2:        50 crude_effect 2002
+  3:        50 crude_effect 2002
+  4:        50 crude_effect 1001
+  5:        50 crude_effect 2002
+ ---                            
+142:       100      ranking 2002
+143:       100      ranking 2002
+144:       100      ranking 2002
+145:        50      ranking 1001
+146:        50      ranking 1001
+:end:
+
 
 The dependence of all the variables is defined by a set of
 formulae. Here the values are hazard ratios and odds ratios specified
@@ -88,6 +117,7 @@ on the logarithmic scale.
 formula1
 #+END_SRC
 
+#+RESULTS[(2023-01-09 14:27:08) 7c78430e442837b5fe50d61112cf7fde919a362a]:
 #+begin_example
 [[1]]
 T1 ~ f(A4, 0.3) + f(A5, 0.7) + f(X1, 1) + f(X2, 0.3) + f(X6, 
@@ -125,6 +155,7 @@ simulated_data <- simulateData(setting = set,
 simulated_data
 #+END_SRC
 
+#+RESULTS[(2023-01-09 14:27:19) 59a49c193005e9ce39f902c3e7d53296161d695f]:
 #+begin_example
       X1 X2 X3 X4 X5          X6          X7        X6_2 A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 T1_placebo_A1 T1_treated_A1
    1:  1  0  1  0  0 -0.13320377 -2.76054462 0.017743244  1  0  0  0  1  0  1  1  1   0      2.920663     4.1787742
@@ -175,6 +206,7 @@ tt=theTruth(setting = set,
 tt[cause==1]
 #+END_SRC
 
+#+RESULTS[(2023-01-09 14:28:16) fa0bed239c1fb2011b68ba3dbf560b9ed4f53fbf]:
 :    intervene cause net scale.censored      ate censored.tau
 : 1:        A1     1   1          0.025 0.059364        33.79
 : 2:        A2     1   1          0.025 0.000180        33.79
@@ -204,8 +236,10 @@ set(x,j="true.ate",value=tt[intervene=="A1"&net==0&cause==1,ate])
 x
 #+END_SRC
 
+#+RESULTS[(2023-01-09 14:28:48) fc85525cf45dd58040b89840ad0338a7534b29db]:
 :    time intervene        ate         se       lower      upper true.ate
 : 1:    5        A1 0.03334221 0.03129835 -0.02800143 0.09468585 0.045185
+
 
 *** Single treatment: net
 #+BEGIN_SRC R  :results output example  :exports both  :session *R* :cache yes  
@@ -224,6 +258,7 @@ set(y,j="true.ate",value=tt[intervene=="A1"&net==1&cause==1,ate])
 y
 #+END_SRC
 
+#+RESULTS[(2023-01-09 14:29:01) 6a9de4efbc17d39712787b7de97fc28bf7891257]:
 :    time intervene        ate         se       lower      upper true.ate
 : 1:    5        A1 0.02160464 0.03579717 -0.04855652 0.09176581 0.059364
 
@@ -250,14 +285,16 @@ tabel_crude
 Publish::org(tabel_crude)
 #+END_SRC
 
+#+RESULTS[(2023-01-10 09:16:21) a66a92cde7e5c97f900778c0bb2514636450ee11]:
 :results:
 | method        |    n | P(C<5) | A1_T1 | A1_T2 |  bias |   SD |   SE | coverage |
 |---------------+------+--------+-------+-------+-------+------+------+----------|
-| causal_forest |  500 |   13.1 |  1.25 |   0.8 | -2.43 | 5.90 | 6.08 |     92.5 |
-| causal_forest | 1000 |   13.1 |  1.25 |   0.8 | -1.62 | 4.21 | 4.36 |     94.7 |
-| causal_forest | 2000 |   13.1 |  1.25 |   0.8 | -1.04 | 3.22 | 3.12 |     92.7 |
-| causal_forest | 5000 |   13.1 |  1.25 |   0.8 | -0.45 | 1.95 | 2.00 |     95.1 |
+| causal_forest |  500 |   13.1 |  1.25 |   0.8 | -2.24 | 6.07 | 6.06 |     92.6 |
+| causal_forest | 1000 |   13.1 |  1.25 |   0.8 | -1.35 | 4.46 | 4.36 |     93.6 |
+| causal_forest | 2000 |   13.1 |  1.25 |   0.8 | -0.90 | 3.05 | 3.12 |     94.5 |
+| causal_forest | 5000 |   13.1 |  1.25 |   0.8 | -0.41 | 1.95 | 2.00 |     94.9 |
 :end:
+
 
 *** Net effects
 #+BEGIN_SRC R  :results silent  :exports code  :session *R* :cache yes
@@ -271,32 +308,36 @@ tabel_net
 Publish::org(tabel_net)
 #+END_SRC
 
+#+RESULTS[(2023-01-10 09:16:37) 9b5ef84a8772ecb03367cf42518f1252962eeed8]:
 :results:
 | method        | P(C<5) | A1_T1 | A1_T2 | bias |   SD |   SE | coverage |
 |---------------+--------+-------+-------+------+------+------+----------|
 | causal_forest |   13.1 |  0.80 |   0.8 | 0.10 | 2.21 | 2.16 |     94.6 |
-| causal_forest |   13.1 |  1.00 |   0.8 | 0.38 | 2.21 | 2.24 |     95.0 |
-| causal_forest |   13.1 |  1.25 |   0.8 | 0.37 | 2.30 | 2.29 |     94.7 |
+| causal_forest |   13.1 |  1.00 |   0.8 | 0.39 | 2.21 | 2.24 |     95.1 |
+| causal_forest |   13.1 |  1.25 |   0.8 | 0.43 | 2.30 | 2.29 |     94.6 |
 :end:
+
 
 **** boxplots: Crude and net effects
 
-#+BEGIN_SRC R :results file graphics :file ./output/crude-net-effect-boxplots.png :exports none :session *R* :cache yes :width 750 :height 500
+#+BEGIN_SRC R :results file graphics :file ./output/crude-net-effect-boxplots.png :exports none :session *R* :cache yes :width 500 :height 1000
 p=tar_read(PLOTFRAME)
 # crude
 b1=boxplot_effects(data=p[theme=="crude_effect"&n==5000&net==0])
 b1_labs=paste("Effect A1 on T2: ",c(0.8,1,1.25))
 names(b1_labs)=c(0.8,1,1.25)
-b1=b1+facet_grid(~A1_T2,labeller=labeller(A1_T2=b1_labs))+ theme(legend.position="none")
+b1=b1+facet_grid(~A1_T2,labeller=labeller(A1_T2=b1_labs))
 # net
 b2=boxplot_effects(data=p[theme=="net_effect"&n==5000&net==1])
 b2_labs=paste("Effect A1 on T1: ",c(0.8,1,1.25))
 names(b2_labs)=c(0.8,1,1.25)
-b2=b2+facet_grid(~A1_T1,labeller=labeller(A1_T1=b1_labs))+ theme(legend.position="none")
+b2=b2+facet_grid(~A1_T1,labeller=labeller(A1_T1=b1_labs))
 cowplot::plot_grid(b1+ggtitle("Crude effects"),b2+ggtitle("Net effects"),ncol = 1)
 #+END_SRC
 
+#+RESULTS[(2023-01-10 09:18:15) d2216327e6260bbaac3c9d8bdcfed54655cb599a]:
 [[file:./output/crude-net-effect-boxplots.png]]
+
 
 
 **** boxplots: Sample size
@@ -305,15 +346,16 @@ cowplot::plot_grid(b1+ggtitle("Crude effects"),b2+ggtitle("Net effects"),ncol = 
 p=tar_read(PLOTFRAME)
 b_c=boxplot_effects(p[theme=="censoring"&net==0&formula=="formula1"])
 b_c=b_c+facet_grid(censored.tau~n)+ylim(c(-.15,.15))
-b_c + theme(legend.position="none")
+b_c
 #+END_SRC
 
+#+RESULTS[(2023-01-10 09:19:32) f22646500f4751cbc25ba69669f3303663094851]:
 [[file:./output/sample-size-boxplots.png]]
 
 
-**** coverage:
+**** Coverage:
 
-#+BEGIN_SRC R :results file graphics :file ./output/coverage.png :exports none :session *R* :cache yes :width 600 :height 300
+#+BEGIN_SRC R :results file graphics :file ./output/coverage-revision.png :exports none :session *R* :cache yes :width 600 :height 300
 r=tar_read(RESULTS)     
 ## R=r[formula=="formula1"&horizon==5&theme!="sample_size"]  
 R=r[net==0]
@@ -327,22 +369,24 @@ R=R[theme!="weighter",.(repetitions,theme,censored.tau,formula,n,A1_T1,A1_T2,hor
 R1a=R[theme=="censoring"&formula=="formula1"] 
 R1b=R[theme=="censoring"&formula=="formula_cens"]
 # coverage independent censoring varying censored procentage at time horizon
-g1a=ggplot(R1a,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(.85,1))+xlab("Sample size")+ylab("Coverage")+
-  ggtitle("Independent censoring")
+# g1a=ggplot(R1a,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="censoring (%)"))+geom_line()+geom_point()+ylim(c(.85,1))+xlab("Sample size")+ylab("Coverage")+
+g1a=ggplot(R1a,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="censoring (%)"))+geom_line()+geom_point()+ylim(c(.9,1))+xlab("Sample size")+ylab("Coverage")+
+ggtitle("Independent censoring")
 # coverage dependent censoring varying censored procentage at time horizon
-g1b=ggplot(R1b,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(.9,1))+xlab("Sample size")+ylab("Coverage")+
+g1b=ggplot(R1b,aes(x=n,y=coverage,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="censoring (%)"))+geom_line()+geom_point()+ylim(c(.9,1))+xlab("Sample size")+ylab("Coverage")+
   ggtitle("Informative censoring")
 # bias independent censoring varying censored procentage at time horizon
-b1a=ggplot(R1a,aes(x=n,y=bias,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(-.025,.025))+xlab("Sample size")+ylab("Bias")+
+b1a=ggplot(R1a,aes(x=n,y=bias,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="censoring (%)"))+geom_line()+geom_point()+ylim(c(-.025,.025))+xlab("Sample size")+ylab("Bias")+
   ggtitle("Independent censoring")
 # bias dependent censoring varying censored procentage at time horizon
-b1b=ggplot(R1b,aes(x=n,y=bias,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="Censoring (%)\nbefore horizon"))+geom_line()+geom_point()+ylim(c(-.025,.025))+xlab("Sample size")+ylab("Bias")+
+b1b=ggplot(R1b,aes(x=n,y=bias,group=censored.tau,linetype=censored.tau))+theme_bw()+guides(linetype=guide_legend(title="censoring (%)"))+geom_line()+geom_point()+ylim(c(-.025,.025))+xlab("Sample size")+ylab("Bias")+
   ggtitle("Informative censoring")
 p.coverage <- cowplot::plot_grid(g1a,g1b,b1a,b1b,ncol=2)
 p.coverage
 #+END_SRC
 
-[[file:./output/coverage.png]]
+#+RESULTS[(2023-01-10 09:21:45) 942454b30f2f6386a556cba9358acceba35f1df2]:
+[[file:./output/coverage-revision.png]]
 
 
 *** Censoring percentage 
@@ -360,41 +404,44 @@ tabel_censoring
 org(tabel_censoring)
 #+END_SRC
 
+#+RESULTS[(2023-01-10 09:22:16) 4a675d5b8a3c93eabe0fc69383c7dc0fea14918c]:
 :results:
 | method        | formula      | P(C<3) | A1_T1 | A1_T2 |  bias |   SD |   SE | coverage |
 |---------------+--------------+--------+-------+-------+-------+------+------+----------|
 | causal_forest | formula1     |    0.0 |  1.25 |     1 | -0.31 | 1.20 | 1.18 |     93.0 |
-| causal_forest | formula1     |   13.1 |  1.25 |     1 | -0.24 | 1.26 | 1.24 |     94.4 |
-| causal_forest | formula1     |   20.1 |  1.25 |     1 | -0.31 | 1.21 | 1.27 |     94.6 |
-| causal_forest | formula_cens |    0.0 |  1.25 |     1 | -0.33 | 1.19 | 1.18 |     92.9 |
-| causal_forest | formula_cens |   13.1 |  1.25 |     1 | -0.38 | 1.24 | 1.23 |     93.7 |
-| causal_forest | formula_cens |   20.1 |  1.25 |     1 | -0.38 | 1.27 | 1.27 |     93.3 |
+| causal_forest | formula1     |   13.1 |  1.25 |     1 | -0.23 | 1.26 | 1.24 |     94.5 |
+| causal_forest | formula1     |   20.1 |  1.25 |     1 | -0.30 | 1.21 | 1.27 |     94.6 |
+| causal_forest | formula_cens |    0.0 |  1.25 |     1 | -0.30 | 1.19 | 1.18 |     92.9 |
+| causal_forest | formula_cens |   13.1 |  1.25 |     1 | -0.35 | 1.24 | 1.23 |     93.8 |
+| causal_forest | formula_cens |   20.1 |  1.25 |     1 | -0.36 | 1.27 | 1.27 |     93.8 |
 :end:
+
 
 *** Misspecified parametric models
 
-#+BEGIN_SRC R :results file graphics :file ./output/misspecified-parametric-boxplots.png :exports none :session *R* :cache yes :height 500 :width 500
+#+BEGIN_SRC R :results file graphics :file ./output/misspecified-parametric-boxplots.png :exports none :session *R* :cache yes 
 p=tar_read(PLOTFRAME)
-b_m=boxplot_effects(p[theme=="misspecified"])
+b_m=boxplot_effects(p[theme=="misspecified"&n==5000])
 b_m=b_m+facet_grid(~method)
 b_m
 p.misspecified <- b_m+theme_bw()+theme(axis.text=element_text(size=12),axis.title=element_text(size=18),legend.position="none",
                                        strip.text = element_text(size=16),
                                        strip.background = element_blank())
-p.misspecified + theme(plot.margin=unit(c(1,1,1,1),"cm"))
+p.misspecified
 #+END_SRC
 
+#+RESULTS[(2023-01-10 11:47:55) 77ae14254be5a6e51725503066c7006861b4ab97]:
 [[file:./output/misspecified-parametric-boxplots.png]]
 
 *** Ranking performance
 
-#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes :width 700 :height 700
+#+BEGIN_SRC R :results file graphics :file ./output/ranking-performance.png :exports none :session *R* :cache yes
 ran <- tar_read(RANKING)[A2_T2%in%c(0.2,1,2)&scale.censored==0.025]
 ran[, A2_T2_text:=paste0("A2 on T2: ", A2_T2)] 
 ran[,net:=factor(net,levels=c(0,1),labels=c("Crude","Net"))]
 gnet=ggplot(ran[net=="Net"&intervene%in%c("A1","A2","A3")&rank==1],aes(x=n,y=mean,linetype=intervene,group=intervene))+geom_line()+geom_point()+facet_grid(~A2_T2_text)+ylim(c(0,1))+ylab("Frequency of rank 1")+guides(linetype=guide_legend(title=""))
 gcrude=ggplot(ran[net=="Crude"&intervene%in%c("A1","A2","A3")&rank==1],aes(x=n,y=mean,linetype=intervene,group=intervene))+geom_line()+geom_point()+
-  facet_grid(~A2_T2_text)+ylim(c(0,1))+ylab("Frequency of rank 1")+guides(linetype=guide_legend(title=""))
+facet_grid(~A2_T2_text)+ylim(c(0,1))+ylab("Frequency of rank 1")+guides(linetype=guide_legend(title=""))
 p.ranking <- cowplot::plot_grid(gcrude+ggtitle("Crude effects")+theme_bw()+
                                 theme(axis.text.x=element_text(size=12,angle=45,hjust=1),
                                       axis.text.y=element_text(size=12,hjust=1),axis.title=element_text(size=12),
@@ -408,6 +455,7 @@ p.ranking <- cowplot::plot_grid(gcrude+ggtitle("Crude effects")+theme_bw()+
 p.ranking
 #+END_SRC
 
+#+RESULTS[(2023-01-10 09:26:19) 6f679c1ff936679ea0de23c6602ccc5e6a66693b]:
 [[file:./output/ranking-performance.png]]
 
 
