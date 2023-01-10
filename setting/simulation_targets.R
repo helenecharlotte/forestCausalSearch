@@ -3,9 +3,9 @@
 ## Author: Thomas Alexander Gerds
 ## Created: May  5 2022 (11:08) 
 ## Version: 
-## Last-Updated: Jul 18 2022 (08:13) 
+## Last-Updated: Nov 10 2022 (16:48) 
 ##           By: Thomas Alexander Gerds
-##     Update #: 163
+##     Update #: 164
 #----------------------------------------------------------------------
 ## 
 ### Commentary:
@@ -111,6 +111,20 @@ varying_misspecified <- data.table::CJ(A1_T1 = 1.25,
                                        net = FALSE,
                                        treat = "A1",
                                        num.trees = 50)
+# misspecified parametric models
+varying_nonmisspecified <- data.table::CJ(A1_T1 = 1.25,
+                                       A1_T2 = 1,
+                                       A2_T1 = 1,
+                                       A2_T2 = 1.25,
+                                       scale.censored = 1/40,
+                                       sample.size = 5000,
+                                       horizon = 5,
+                                       setting = "formula1",
+                                       method = c("causal_forest","CSC","FGR"),
+                                       weighter = "ranger",
+                                       net = FALSE,
+                                       treat = "A1",
+                                       num.trees = 50)
 # ranking treatments
 varying_ranking <- data.table::CJ(A1_T1 = 1.25,
                                   A1_T2 = 1,
@@ -129,6 +143,7 @@ varying <-  rbindlist(list(varying_crude[,theme := "crude_effect"],
                            varying_net[,theme := "net_effect"],
                            varying_censored[,theme := "censoring"],
                            varying_misspecified[,theme := "misspecified"],
+                           varying_nonmisspecified[,theme := "nonmisspecified"],
                            varying_ranking[,theme := "ranking"]))
 varying[sample.size == 5000,num.trees := 50]
 varying_target <- tar_target(VARYING,
