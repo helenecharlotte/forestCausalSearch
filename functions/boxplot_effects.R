@@ -3,9 +3,9 @@
 ## Author: Thomas Alexander Gerds
 ## Created: Jul 13 2022 (09:59) 
 ## Version: 
-## Last-Updated: Jul 18 2022 (09:36) 
+## Last-Updated: Jul 13 2022 (10:32) 
 ##           By: Thomas Alexander Gerds
-##     Update #: 7
+##     Update #: 6
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,7 +19,7 @@ boxplot_effects <- function(data){
     g <- g+geom_boxplot()+theme(legend.position="none")
     g <- g+geom_hline(aes(yintercept = true.ate,color = "red"),data = data)
     g = g+ylab("Average treatment effect")+theme(axis.ticks.x = element_blank(), axis.text.x = element_blank())
-    g+theme_bw()
+    g
 }
 
 
