@@ -3,9 +3,9 @@
 ## Author: Thomas Alexander Gerds
 ## Created: May  5 2022 (11:08) 
 ## Version: 
-## Last-Updated: Nov 10 2022 (16:48) 
+## Last-Updated: Jan 10 2023 (14:31) 
 ##           By: Thomas Alexander Gerds
-##     Update #: 164
+##     Update #: 201
 #----------------------------------------------------------------------
 ## 
 ### Commentary:
@@ -24,7 +24,8 @@
 library(data.table)
 ## MCCORES <- 1
 ## MCCORES <- 5
-MCCORES <- 50
+MCCORES <- 25
+setDTthreads(1)
 fixed <- list(event.times = c("T1","T2"),
               treatments = c("A1" = .4,"A2" = .3, "A3" = .3,"A4" = .4,"A5" = .5,"A6" = .2,"A7" = .7,"A8" = .8,"A9" = .9,"A10" = .1),
               binary.covariates = c("X1" = .1,"X2" = .2,"X3" = .3,"X4" = .4,"X5" = .5),
@@ -103,7 +104,8 @@ varying_misspecified <- data.table::CJ(A1_T1 = 1.25,
                                        A2_T1 = 1,
                                        A2_T2 = 1.25,
                                        scale.censored = 1/40,
-                                       sample.size = 5000,
+                                       ## sample.size = 5000,
+                                       sample.size = c(500,1000,2000,5000),
                                        horizon = 5,
                                        setting = "formula_misspecified",
                                        method = c("causal_forest","CSC","FGR"),
@@ -111,13 +113,12 @@ varying_misspecified <- data.table::CJ(A1_T1 = 1.25,
                                        net = FALSE,
                                        treat = "A1",
                                        num.trees = 50)
-# misspecified parametric models
-varying_nonmisspecified <- data.table::CJ(A1_T1 = 1.25,
+varying_notmisspecified <- data.table::CJ(A1_T1 = 1.25,
                                        A1_T2 = 1,
                                        A2_T1 = 1,
                                        A2_T2 = 1.25,
                                        scale.censored = 1/40,
-                                       sample.size = 5000,
+                                       sample.size = c(500,1000,2000,5000),
                                        horizon = 5,
                                        setting = "formula1",
                                        method = c("causal_forest","CSC","FGR"),
@@ -143,16 +144,14 @@ varying <-  rbindlist(list(varying_crude[,theme := "crude_effect"],
                            varying_net[,theme := "net_effect"],
                            varying_censored[,theme := "censoring"],
                            varying_misspecified[,theme := "misspecified"],
-                           varying_nonmisspecified[,theme := "nonmisspecified"],
+                           varying_notmisspecified[,theme := "not_misspecified"],
                            varying_ranking[,theme := "ranking"]))
 varying[sample.size == 5000,num.trees := 50]
 varying_target <- tar_target(VARYING,
                              varying,
                              deployment = "main")
-varying[,reps := 1001]
-## varying[sample.size == 500,reps := 10000]
-## varying[sample.size == 1000,reps := 5000]
-## varying[sample.size == 2000,reps := 3000]
+varying[,reps := 2002]
+varying[sample.size ==  5000,reps := 1001]
 
 # ---------------------------------------------------------------------
 # Calculation of true ATE values
@@ -259,8 +258,9 @@ estimates <- tar_map(
         },mc.cores = MCCORES)) # end of repetitions
         gc()
         out
-    }) # end of parameter map
+    },cue = tar_cue(mode = "never")) # end of parameter map
 )
+
 # combine
 ate <- tar_combine(ESTIMATE_ATE,{
     estimates
@@ -272,6 +272,7 @@ results <- tar_target(RESULTS,
                       summarizePerformance(truth = TRUTH,
                                            estimate = ESTIMATE_ATE),
                       deployment = "main")
+
 
 ranking <- tar_target(RANKING,
                       rankingPerformance(estimate = ESTIMATE_ATE),
