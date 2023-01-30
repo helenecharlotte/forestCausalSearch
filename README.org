@@ -77,12 +77,12 @@ varying parameter values. They can be inspected by looking at the
 following object:
 
 #+ATTR_LATEX: :options otherkeywords={}, deletekeywords={}
-#+BEGIN_SRC R  :results output raw drawer  :exports code  :session *R* :cache yes  
-tar_read(VARYING) 
+#+BEGIN_SRC R  :results output   :exports code  :session *R* :cache yes  
+tar_read(VARYING)  
 #+END_SRC
 
-#+RESULTS[(2023-01-10 11:49:39) 426d486a51b67a3234bd3c64952becd9809a1bb3]:
-:results:
+#+RESULTS[(2023-01-30 18:55:14) 4060990eae38e7acfdb482031923c54840f4bda5]:
+#+begin_example
      A1_T1 A1_T2 A2_T1 A2_T2 scale.censored sample.size horizon         setting        method weighter   net treat
   1:  1.25   0.8     1  1.25          0.025         500       5        formula1 causal_forest   ranger FALSE    A1
   2:  1.25   0.8     1  1.25          0.025        1000       5        formula1 causal_forest   ranger FALSE    A1
@@ -107,7 +107,7 @@ tar_read(VARYING)
 144:       100      ranking 2002
 145:        50      ranking 1001
 146:        50      ranking 1001
-:end:
+#+end_example
 
 
 The dependence of all the variables is defined by a set of
