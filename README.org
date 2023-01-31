@@ -282,10 +282,10 @@ tabel_crude
 #+END_SRC
 
 #+BEGIN_SRC R  :results output raw drawer  :exports results  :session *R* :cache yes  
-Publish::org(tabel_crude)
+Publish::org(tabel_crude)  
 #+END_SRC
 
-#+RESULTS[(2023-01-10 09:16:21) a66a92cde7e5c97f900778c0bb2514636450ee11]:
+#+RESULTS[(2023-01-31 09:57:44) 3645937db0adb5cefa508afbbb0cb88eeb7c0b76]:
 :results:
 | method        |    n | P(C<5) | A1_T1 | A1_T2 |  bias |   SD |   SE | coverage |
 |---------------+------+--------+-------+-------+-------+------+------+----------|
@@ -301,14 +301,14 @@ Publish::org(tabel_crude)
 x=tar_read(RESULTS)
 x_net = x[theme=="net_effect" & net==1]
 tabel_net=x_net[,.(method,"P(C<5)"=round(censored.tau,1),A1_T1,A1_T2,bias=round(100*bias,2),SD=round(100*sd,2),SE=round(100*mean.se,2),coverage=round(100*coverage,1))]
-tabel_net
+tabel_net 
 #+END_SRC
 
 #+BEGIN_SRC R  :results output raw drawer  :exports results  :session *R* :cache yes  
-Publish::org(tabel_net)
+Publish::org(tabel_net) 
 #+END_SRC
 
-#+RESULTS[(2023-01-10 09:16:37) 9b5ef84a8772ecb03367cf42518f1252962eeed8]:
+#+RESULTS[(2023-01-31 09:57:55) 0349dae4066d51258e6cd43afa934adacce5d6b8]:
 :results:
 | method        | P(C<5) | A1_T1 | A1_T2 | bias |   SD |   SE | coverage |
 |---------------+--------+-------+-------+------+------+------+----------|
@@ -317,7 +317,7 @@ Publish::org(tabel_net)
 | causal_forest |   13.1 |  1.25 |   0.8 | 0.43 | 2.30 | 2.29 |     94.6 |
 :end:
 
-<<<<<<< HEAD
+
 
 *** Boxplots: Crude and net effects
 
